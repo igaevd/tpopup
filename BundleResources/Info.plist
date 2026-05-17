@@ -19,11 +19,17 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0</string>
+    <string>1.1</string>
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
+    <!-- LSUIElement keeps tpopup from activating on launch when `open -a` is invoked
+         (the Quick Action flow). The grammar correction needs the text editor to
+         remain frontmost so the synthesized ⌘V lands in its selection. In Settings
+         mode we override this at runtime by setting `.regular` activation policy. -->
+    <key>LSUIElement</key>
+    <true/>
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSSupportsAutomaticGraphicsSwitching</key>

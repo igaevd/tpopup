@@ -6,11 +6,14 @@ import Foundation
 struct OpenAIClient {
     static let endpoint = URL(string: "https://api.openai.com/v1/chat/completions")!
 
-    func translate(text: String, settings: TranslationSettings) async throws -> String {
+    func complete(text: String,
+                  apiKey: String,
+                  model: String,
+                  prompt: String) async throws -> String {
         let payload: [String: Any] = [
-            "model": settings.model,
+            "model": model,
             "messages": [
-                ["role": "system", "content": settings.prompt],
+                ["role": "system", "content": prompt],
                 ["role": "user", "content": text]
             ]
         ]
@@ -18,7 +21,7 @@ struct OpenAIClient {
         var request = URLRequest(url: Self.endpoint)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(settings.apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.httpBody = try JSONSerialization.data(withJSONObject: payload)
         request.timeoutInterval = 60
 

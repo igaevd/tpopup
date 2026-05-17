@@ -7,18 +7,22 @@
 set -euo pipefail
 
 APP_NAME="tpopup"
-APP_VERSION="1.0"
 BUNDLE_ID="com.idmitry.tpopup"
 PROJECT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 DIST_DIR="${PROJECT_DIR}/dist"
 APP_BUNDLE="${DIST_DIR}/${APP_NAME}.app"
-DMG_FILE="${DIST_DIR}/${APP_NAME}-${APP_VERSION}.dmg"
 DMG_STAGING="${DIST_DIR}/dmg-staging"
 
 ICON_SRC="${PROJECT_DIR}/resources/AppIcon.icns"
-PROMPT_SRC="${PROJECT_DIR}/resources/translation-ai-prompt.md"
+TRANSLATION_PROMPT_SRC="${PROJECT_DIR}/resources/translation-ai-prompt.md"
+GRAMMAR_PROMPT_SRC="${PROJECT_DIR}/resources/grammar-ai-prompt.md"
 PLIST_SRC="${PROJECT_DIR}/BundleResources/Info.plist"
+
+# Single source of truth — pull the version straight from Info.plist so it never
+# drifts from what macOS shows in the About panel.
+APP_VERSION="$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "${PLIST_SRC}")"
+DMG_FILE="${DIST_DIR}/${APP_NAME}-${APP_VERSION}.dmg"
 
 cd "${PROJECT_DIR}"
 
@@ -39,10 +43,11 @@ echo "▶ Assembling ${APP_NAME}.app bundle…"
 mkdir -p "${APP_BUNDLE}/Contents/MacOS"
 mkdir -p "${APP_BUNDLE}/Contents/Resources"
 
-cp "${BIN_PATH}"   "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}"
-cp "${PLIST_SRC}"  "${APP_BUNDLE}/Contents/Info.plist"
-cp "${ICON_SRC}"   "${APP_BUNDLE}/Contents/Resources/AppIcon.icns"
-cp "${PROMPT_SRC}" "${APP_BUNDLE}/Contents/Resources/translation-ai-prompt.md"
+cp "${BIN_PATH}"               "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}"
+cp "${PLIST_SRC}"              "${APP_BUNDLE}/Contents/Info.plist"
+cp "${ICON_SRC}"               "${APP_BUNDLE}/Contents/Resources/AppIcon.icns"
+cp "${TRANSLATION_PROMPT_SRC}" "${APP_BUNDLE}/Contents/Resources/translation-ai-prompt.md"
+cp "${GRAMMAR_PROMPT_SRC}"     "${APP_BUNDLE}/Contents/Resources/grammar-ai-prompt.md"
 
 # Strip debug info so the shipped binary doesn't carry dSYMs or source paths.
 strip -S -x "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}" 2>/dev/null || true

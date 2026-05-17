@@ -14,9 +14,11 @@ final class SettingsStore: ObservableObject {
     /// the user can edit, decide they don't want the changes, close via the red X or
     /// ⌘Q, and the previously-saved version on disk is unaffected.
     @Published var translation: TranslationSettings
+    @Published var grammar: GrammarSettings
 
     private enum Keys {
         static let translation = "translation"
+        static let grammar = "grammar"
     }
 
     private let defaults: UserDefaults
@@ -27,6 +29,10 @@ final class SettingsStore: ObservableObject {
                                      forKey: Keys.translation,
                                      defaults: defaults)
             ?? TranslationSettings.default
+        self.grammar = Self.load(GrammarSettings.self,
+                                 forKey: Keys.grammar,
+                                 defaults: defaults)
+            ?? GrammarSettings.default
     }
 
     /// Persists current in-memory settings to UserDefaults. Only invoked when the user
@@ -34,6 +40,7 @@ final class SettingsStore: ObservableObject {
     /// whatever was typed since the last successful save.
     func save() {
         persist(translation, forKey: Keys.translation)
+        persist(grammar, forKey: Keys.grammar)
         defaults.synchronize()
     }
 

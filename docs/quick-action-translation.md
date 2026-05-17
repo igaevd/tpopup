@@ -14,9 +14,14 @@ This Quick Action uses native macOS Services to extract selected text without re
 - Paste the following script:
 
 ```sh
-cat | pbcopy
+cat | LANG=en_US.UTF-8 pbcopy
 open -a /Applications/tpopup.app --args -translate
 ```
+
+(The `LANG=…` prefix is what tells `pbcopy` to treat its stdin as UTF-8.
+Without it Automator's shell environment may leave the locale unset, and
+`pbcopy` falls back to Mac OS Roman, double-encoding any non-ASCII byte —
+curly apostrophes, em dashes, accented letters, Cyrillic, etc.)
 
 ### Save and bind shortcut
 

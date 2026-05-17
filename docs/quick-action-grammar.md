@@ -11,12 +11,18 @@ This Quick Action uses native macOS Services to extract selected text without re
 
 - Drag a "Run Shell Script" action into the workflow.
 - Set "Pass input" to "to stdin".
+- Enable "Output replaces selected text"
 - Paste the following script:
 
 ```sh
-cat | pbcopy
-open -a /Applications/tpopup.app --args -grammar
+cat | LANG=en_US.UTF-8 pbcopy
+/Applications/tpopup.app/Contents/MacOS/tpopup -grammar
 ```
+
+(The `LANG=…` prefix is what tells `pbcopy` to treat its stdin as UTF-8.
+Without it Automator's shell environment may leave the locale unset, and
+`pbcopy` falls back to Mac OS Roman, double-encoding any non-ASCII byte —
+curly apostrophes, em dashes, accented letters, Cyrillic, etc.)
 
 ### Save and bind shortcut
 

@@ -6,7 +6,8 @@ import Foundation
 /// somewhere in the `Modes/` directory.
 enum ModeRegistry {
     static let all: [AppMode] = [
-        TranslationMode.appMode
+        TranslationMode.appMode,
+        GrammarMode.appMode
     ]
 
     static func mode(forFlag flag: String) -> AppMode? {

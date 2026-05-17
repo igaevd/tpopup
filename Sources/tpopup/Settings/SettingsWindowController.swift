@@ -25,7 +25,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         hosting.preferredContentSize = contentSize
 
         let window = NSWindow(contentViewController: hosting)
-        window.title = "tpopup"
+        window.title = Self.windowTitle()
         window.styleMask = [.titled, .closable, .miniaturizable]
         window.isReleasedWhenClosed = false
         window.delegate = self
@@ -54,6 +54,16 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    /// Builds the settings window title from the bundle version. Reads
+    /// `CFBundleShortVersionString` from `Info.plist` so the title automatically tracks
+    /// the version bump made there (and the DMG name made by `pack.sh`).
+    /// Falls back to the bare app name when the version key is missing — that only
+    /// happens when running the dev binary out of `.build/`, not from a real bundle.
+    private static func windowTitle() -> String {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+        return version.map { "tpopup v\($0)" } ?? "tpopup"
     }
 
     private func confirm() {

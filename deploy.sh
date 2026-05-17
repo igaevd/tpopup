@@ -15,7 +15,8 @@ APP_BUNDLE="${STAGING_DIR}/${APP_NAME}.app"
 INSTALL_PATH="/Applications/${APP_NAME}.app"
 
 ICON_SRC="${PROJECT_DIR}/resources/AppIcon.icns"
-PROMPT_SRC="${PROJECT_DIR}/resources/translation-ai-prompt.md"
+TRANSLATION_PROMPT_SRC="${PROJECT_DIR}/resources/translation-ai-prompt.md"
+GRAMMAR_PROMPT_SRC="${PROJECT_DIR}/resources/grammar-ai-prompt.md"
 PLIST_SRC="${PROJECT_DIR}/BundleResources/Info.plist"
 
 cd "${PROJECT_DIR}"
@@ -37,10 +38,11 @@ echo "▶ Assembling ${APP_NAME}.app bundle…"
 mkdir -p "${APP_BUNDLE}/Contents/MacOS"
 mkdir -p "${APP_BUNDLE}/Contents/Resources"
 
-cp "${BIN_PATH}"   "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}"
-cp "${PLIST_SRC}"  "${APP_BUNDLE}/Contents/Info.plist"
-cp "${ICON_SRC}"   "${APP_BUNDLE}/Contents/Resources/AppIcon.icns"
-cp "${PROMPT_SRC}" "${APP_BUNDLE}/Contents/Resources/translation-ai-prompt.md"
+cp "${BIN_PATH}"               "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}"
+cp "${PLIST_SRC}"              "${APP_BUNDLE}/Contents/Info.plist"
+cp "${ICON_SRC}"               "${APP_BUNDLE}/Contents/Resources/AppIcon.icns"
+cp "${TRANSLATION_PROMPT_SRC}" "${APP_BUNDLE}/Contents/Resources/translation-ai-prompt.md"
+cp "${GRAMMAR_PROMPT_SRC}"     "${APP_BUNDLE}/Contents/Resources/grammar-ai-prompt.md"
 
 strip -S -x "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}" 2>/dev/null || true
 printf 'APPL????' > "${APP_BUNDLE}/Contents/PkgInfo"

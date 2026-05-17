@@ -96,7 +96,12 @@ final class TranslationPopupController: NSObject, NSWindowDelegate {
         translationTask = Task { [weak self] in
             guard let self else { return }
             do {
-                let result = try await OpenAIClient().translate(text: source, settings: settings)
+                let result = try await OpenAIClient().complete(
+                    text: source,
+                    apiKey: settings.apiKey,
+                    model: settings.model,
+                    prompt: settings.prompt
+                )
                 self.debugLog("OpenAI request succeeded; chars=\(result.count)")
                 self.viewModel.finish(translation: result)
             } catch {
