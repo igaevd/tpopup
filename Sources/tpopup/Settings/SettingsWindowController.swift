@@ -4,6 +4,7 @@ import SwiftUI
 @MainActor
 final class SettingsWindowController: NSObject, NSWindowDelegate {
     private var window: NSWindow?
+    private var keyMonitor: Any?
 
     func show() {
         if let existing = window {
@@ -52,6 +53,17 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
         self.window = window
 
+        // Esc closes the window without saving — same outcome as the red X.
+        // `performClose` triggers `windowWillClose`, which terminates the app; saving
+        // only happens inside `confirm()` so typed-but-uncommitted edits are discarded.
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            if event.keyCode == 53 {       // kVK_Escape
+                self?.window?.performClose(nil)
+                return nil
+            }
+            return event
+        }
+
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
@@ -78,6 +90,10 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     /// We intentionally do *not* save here: persistence only happens inside `confirm()`
     /// so that exiting via the red X or ⌘Q discards whatever was typed.
     func windowWillClose(_ notification: Notification) {
+        if let monitor = keyMonitor {
+            NSEvent.removeMonitor(monitor)
+            keyMonitor = nil
+        }
         NSApp.terminate(nil)
     }
 }

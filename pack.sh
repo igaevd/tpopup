@@ -1,9 +1,11 @@
 #!/bin/bash
 # Builds tpopup as a release .app bundle and packages it into a DMG that opens
-# with an "Applications" symlink for the standard drag-to-install flow.
+# with an "Applications" symlink for the standard drag-to-install flow, plus a
+# plain zip of the .app for hosts that prefer a flat archive.
 #
 # Usage:  ./pack.sh
 # Output: dist/tpopup-<version>.dmg
+#         dist/tpopup-<version>.zip
 set -euo pipefail
 
 APP_NAME="tpopup"
@@ -23,6 +25,7 @@ PLIST_SRC="${PROJECT_DIR}/BundleResources/Info.plist"
 # drifts from what macOS shows in the About panel.
 APP_VERSION="$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "${PLIST_SRC}")"
 DMG_FILE="${DIST_DIR}/${APP_NAME}-${APP_VERSION}.dmg"
+ZIP_FILE="${DIST_DIR}/${APP_NAME}-${APP_VERSION}.zip"
 
 cd "${PROJECT_DIR}"
 
@@ -90,8 +93,16 @@ hdiutil convert "${TMP_DMG}" \
 rm -f "${TMP_DMG}"
 rm -rf "${DMG_STAGING}"
 
+echo "▶ Building zip archive…"
+# `ditto` preserves resource forks, symlinks, and code-signing metadata that a
+# plain `zip` would mangle. `--keepParent` makes the archive unpack to
+# `tpopup.app/` instead of dumping its contents at the destination root.
+rm -f "${ZIP_FILE}"
+ditto -c -k --sequesterRsrc --keepParent "${APP_BUNDLE}" "${ZIP_FILE}"
+
 echo ""
 echo "✓ Built ${APP_BUNDLE}"
 echo "✓ Packaged ${DMG_FILE}"
+echo "✓ Packaged ${ZIP_FILE}"
 echo ""
 echo "Open the DMG and drag ${APP_NAME}.app into Applications to install."
