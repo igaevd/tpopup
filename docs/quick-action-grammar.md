@@ -15,11 +15,11 @@ This Quick Action uses native macOS Services to extract selected text without re
 
 ```sh
 cat | pbcopy
-open -a /Applications/tpopup.app --args -translate
+open -a /Applications/tpopup.app --args -grammar
 ```
 
 ### Save and bind shortcut
 
-- Save the workflow as `tpopup`.
+- Save the workflow as `Grammar Correction Popup`.
 - Open System Settings, go to Keyboard, Keyboard Shortcuts, and then Services.
-- Find `tpopup` under the Text section and assign your keyboard shortcut `cmd+\`.
+- Find `Grammar Correction Popup` under the Text section and assign your keyboard shortcut `Option+Command+G`.

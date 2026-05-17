@@ -1,0 +1,73 @@
+import AppKit
+import SwiftUI
+
+@MainActor
+final class SettingsWindowController: NSObject, NSWindowDelegate {
+    private var window: NSWindow?
+
+    func show() {
+        if let existing = window {
+            existing.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        let root = SettingsRootView { [weak self] in
+            self?.confirm()
+        }
+        .environmentObject(SettingsStore.shared)
+
+        let contentSize = NSSize(width: 560, height: 460)
+
+        let hosting = NSHostingController(rootView: root)
+        // Lock the size up front so the window can be built and positioned in one shot,
+        // before SwiftUI's first layout pass causes any resize/jump.
+        hosting.preferredContentSize = contentSize
+
+        let window = NSWindow(contentViewController: hosting)
+        window.title = "tpopup"
+        window.styleMask = [.titled, .closable, .miniaturizable]
+        window.isReleasedWhenClosed = false
+        window.delegate = self
+        // Lock the window to dark mode regardless of the system theme so it matches
+        // the translation popup.
+        window.appearance = NSAppearance(named: .darkAqua)
+
+        // Belt-and-suspenders: even with preferredContentSize, force the content size to
+        // match before computing the centered origin.
+        window.setContentSize(contentSize)
+
+        // Compute the origin ourselves. `window.center()` has been unreliable here —
+        // the frame size sometimes isn't finalized when it runs, so the window snaps to
+        // the upper-right of the screen.
+        if let screen = NSScreen.main {
+            let visible = screen.visibleFrame
+            let frame = window.frame   // includes title bar
+            let origin = NSPoint(
+                x: visible.minX + (visible.width - frame.width) / 2,
+                y: visible.minY + (visible.height - frame.height) / 2
+            )
+            window.setFrameOrigin(origin)
+        }
+
+        self.window = window
+
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func confirm() {
+        // OK is the ONE path that commits typed changes to disk.
+        SettingsStore.shared.save()
+        window?.performClose(nil)
+    }
+
+    // MARK: - NSWindowDelegate
+
+    /// Closing the window — by OK, the red traffic-light, or ⌘Q — terminates the app.
+    /// We intentionally do *not* save here: persistence only happens inside `confirm()`
+    /// so that exiting via the red X or ⌘Q discards whatever was typed.
+    func windowWillClose(_ notification: Notification) {
+        NSApp.terminate(nil)
+    }
+}

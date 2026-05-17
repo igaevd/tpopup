@@ -31,7 +31,10 @@ playground.xcworkspace
 
 .build/
 .build-release/
+.build-install/
 release/
+dist/
+.swiftpm/
 
 # CocoaPods
 #
