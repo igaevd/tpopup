@@ -15,10 +15,12 @@ final class SettingsStore: ObservableObject {
     /// ⌘Q, and the previously-saved version on disk is unaffected.
     @Published var translation: TranslationSettings
     @Published var grammar: GrammarSettings
+    @Published var style: StyleSettings
 
     private enum Keys {
         static let translation = "translation"
         static let grammar = "grammar"
+        static let style = "style"
     }
 
     private let defaults: UserDefaults
@@ -33,6 +35,10 @@ final class SettingsStore: ObservableObject {
                                  forKey: Keys.grammar,
                                  defaults: defaults)
             ?? GrammarSettings.default
+        self.style = Self.load(StyleSettings.self,
+                               forKey: Keys.style,
+                               defaults: defaults)
+            ?? StyleSettings.default
     }
 
     /// Persists current in-memory settings to UserDefaults. Only invoked when the user
@@ -41,6 +47,7 @@ final class SettingsStore: ObservableObject {
     func save() {
         persist(translation, forKey: Keys.translation)
         persist(grammar, forKey: Keys.grammar)
+        persist(style, forKey: Keys.style)
         defaults.synchronize()
     }
 

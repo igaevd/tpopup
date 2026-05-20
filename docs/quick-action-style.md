@@ -1,0 +1,31 @@
+# Style-correct selection via Quick Action
+
+This Quick Action uses native macOS Services to extract selected text without requiring accessibility permissions. It copies the text to the clipboard and launches the tpopup app.
+
+### Create the Quick Action
+
+- Open Automator and create a new Quick Action.
+- Set "Workflow receives current" to "text" in "any application".
+
+### Add shell script
+
+- Drag a "Run Shell Script" action into the workflow.
+- Set "Pass input" to "to stdin".
+- Enable "Output replaces selected text"
+- Paste the following script:
+
+```sh
+cat | LANG=en_US.UTF-8 pbcopy
+/Applications/tpopup.app/Contents/MacOS/tpopup -style
+```
+
+(The `LANG=…` prefix is what tells `pbcopy` to treat its stdin as UTF-8.
+Without it Automator's shell environment may leave the locale unset, and
+`pbcopy` falls back to Mac OS Roman, double-encoding any non-ASCII byte —
+curly apostrophes, em dashes, accented letters, Cyrillic, etc.)
+
+### Save and bind shortcut
+
+- Save the workflow as `Style Correction Popup`.
+- Open System Settings, go to Keyboard, Keyboard Shortcuts, and then Services.
+- Find `Style Correction Popup` under the Text section and assign your keyboard shortcut `Option+Command+R`.

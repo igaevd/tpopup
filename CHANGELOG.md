@@ -1,5 +1,8 @@
 # tpopup change log
 
+## v1.3 2026-05-20
+Added the style correction mode `-style`
+
 ## v1.2 2026-05-17
 Esc closes the Settings window without saving
 

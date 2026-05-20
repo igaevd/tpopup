@@ -19,6 +19,7 @@ DMG_STAGING="${DIST_DIR}/dmg-staging"
 ICON_SRC="${PROJECT_DIR}/resources/AppIcon.icns"
 TRANSLATION_PROMPT_SRC="${PROJECT_DIR}/resources/translation-ai-prompt.md"
 GRAMMAR_PROMPT_SRC="${PROJECT_DIR}/resources/grammar-ai-prompt.md"
+STYLE_PROMPT_SRC="${PROJECT_DIR}/resources/style-ai-prompt.md"
 PLIST_SRC="${PROJECT_DIR}/BundleResources/Info.plist"
 
 # Single source of truth — pull the version straight from Info.plist so it never
@@ -51,6 +52,7 @@ cp "${PLIST_SRC}"              "${APP_BUNDLE}/Contents/Info.plist"
 cp "${ICON_SRC}"               "${APP_BUNDLE}/Contents/Resources/AppIcon.icns"
 cp "${TRANSLATION_PROMPT_SRC}" "${APP_BUNDLE}/Contents/Resources/translation-ai-prompt.md"
 cp "${GRAMMAR_PROMPT_SRC}"     "${APP_BUNDLE}/Contents/Resources/grammar-ai-prompt.md"
+cp "${STYLE_PROMPT_SRC}"       "${APP_BUNDLE}/Contents/Resources/style-ai-prompt.md"
 
 # Strip debug info so the shipped binary doesn't carry dSYMs or source paths.
 strip -S -x "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}" 2>/dev/null || true

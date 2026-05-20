@@ -7,7 +7,8 @@ import Foundation
 enum ModeRegistry {
     static let all: [AppMode] = [
         TranslationMode.appMode,
-        GrammarMode.appMode
+        GrammarMode.appMode,
+        StyleMode.appMode
     ]
 
     static func mode(forFlag flag: String) -> AppMode? {
