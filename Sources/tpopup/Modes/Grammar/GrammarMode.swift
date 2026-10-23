@@ -8,7 +8,7 @@ enum GrammarMode {
         makeSettingsTab: { AnyView(GrammarSettingsView()) },
         run: {
             // The runner must outlive this closure: hand it to the app delegate so it
-            // sticks around until the OpenAI response arrives and the ⌘V is posted.
+            // sticks around until the model's response arrives and the ⌘V is posted.
             let runner = GrammarRunner()
             AppDelegate.shared?.retain(runner)
             runner.run()

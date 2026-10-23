@@ -17,8 +17,10 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             self?.confirm()
         }
         .environmentObject(SettingsStore.shared)
+        .environmentObject(StatusCenter())
 
-        let contentSize = NSSize(width: 560, height: 460)
+        let contentSize = NSSize(width: SettingsRootView.contentSize.width,
+                                 height: SettingsRootView.contentSize.height)
 
         let hosting = NSHostingController(rootView: root)
         // Lock the size up front so the window can be built and positioned in one shot,
@@ -66,6 +68,19 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+
+        #if DEBUG
+        // Developer aid: `TPOPUP_SNAPSHOT_DIR=/some/dir tpopup` renders every Settings
+        // tab to PNG files there and quits. Lets the layout be checked from a terminal
+        // without Screen Recording permission. Compiled out of release builds.
+        if let dir = ProcessInfo.processInfo.environment["TPOPUP_SNAPSHOT_DIR"] {
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                await SettingsSnapshots.write(toDirectory: dir)
+                NSApp.terminate(nil)
+            }
+        }
+        #endif
     }
 
     /// Builds the settings window title from the bundle version. Reads

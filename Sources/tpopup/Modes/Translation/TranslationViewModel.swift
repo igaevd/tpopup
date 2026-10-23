@@ -6,9 +6,13 @@ final class TranslationViewModel: ObservableObject {
     @Published var translation: String = ""
     @Published var errorMessage: String? = nil
     @Published var isLoading: Bool = false
+    /// The source text the current request/translation was made from. Differs from
+    /// `sourceText` once the user edits the top section, until they retranslate.
+    @Published var translatedSourceText: String = ""
 
     func start(with sourceText: String) {
         self.sourceText = sourceText
+        self.translatedSourceText = sourceText
         self.translation = ""
         self.errorMessage = nil
         self.isLoading = true

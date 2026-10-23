@@ -11,29 +11,29 @@ import Foundation
 ///
 /// All this runner does is:
 ///   1. Pre-flight: settings filled in, clipboard holds text.
-///   2. Show a floating status pill in the middle of the screen.
-///   3. Send the clipboard text to OpenAI with the user's style prompt.
+///   2. Slide a small status island down from the top of the screen.
+///   3. Send the clipboard text to the configured model with the user's style prompt.
 ///   4. On success: write the corrected text to stdout and exit. The Quick Action
 ///      handles the replacement — no keystroke simulation, no Accessibility permission.
 ///   5. On failure: hide the pill and show a standard error alert.
 @MainActor
 final class StyleRunner: NSObject {
-    private let statusWindow = StyleStatusWindow()
+    private let island = StatusIslandWindow()
     private var task: Task<Void, Never>?
 
     func run() {
         debugLog("run() entered")
 
-        // Pre-flight: settings filled in?
-        let settings = SettingsStore.shared.style
-        if let missing = settings.missingFields {
-            let info: String
-            if missing.count >= 3 {
-                info = "Open the app to fill in your style correction settings."
-            } else {
-                info = "Open the app and set the \(joined(missing)) in the Style Correction tab."
-            }
-            ErrorPresenter.showAndQuit("Style correction settings are incomplete.", info: info)
+        // Pre-flight: a model is chosen, complete, and there is a prompt?
+        let store = SettingsStore.shared
+        let settings = store.style
+        if let problem = settings.problem(models: store.models, tabName: "Style Correction") {
+            ErrorPresenter.showAndQuit("Style correction settings are incomplete.", info: problem)
+        }
+        // `problem` is nil only when the profile resolves, so this cannot fail.
+        guard let profile = settings.profile(in: store.models) else {
+            ErrorPresenter.showAndQuit("Style correction settings are incomplete.",
+                                       info: "Open the app and choose a model in the Style Correction tab.")
         }
 
         // Pre-flight: clipboard has text?
@@ -44,26 +44,24 @@ final class StyleRunner: NSObject {
             )
         }
 
-        debugLog("pre-flight passed; source.length=\(source.count) model=\(settings.model)")
+        debugLog("pre-flight passed; source.length=\(source.count) model=\(profile.preset.name)/\(profile.modelID)")
 
-        // Show the status pill on whichever screen is currently active.
-        let screen = NSScreen.main ?? NSScreen.screens.first!
-        statusWindow.show(onScreen: screen)
+        // Slide the "refining" island down from the top of the screen under the mouse.
+        island.show(label: "refining")
 
         // Fire the request.
         task = Task { [weak self] in
             guard let self else { return }
             do {
-                let corrected = try await OpenAIClient().complete(
+                let corrected = try await LLMClient().complete(
                     text: source,
-                    apiKey: settings.apiKey,
-                    model: settings.model,
-                    prompt: settings.prompt
+                    prompt: settings.prompt,
+                    profile: profile
                 )
-                self.debugLog("OpenAI request succeeded; chars=\(corrected.count)")
+                self.debugLog("request succeeded; chars=\(corrected.count)")
                 self.finishSuccess(corrected: corrected)
             } catch {
-                self.debugLog("OpenAI request failed: \(error.localizedDescription)")
+                self.debugLog("request failed: \(error.localizedDescription)")
                 self.finishFailure(error.localizedDescription)
             }
         }
@@ -72,35 +70,26 @@ final class StyleRunner: NSObject {
     // MARK: - Completion
 
     private func finishSuccess(corrected: String) {
-        statusWindow.hide()
-
         // The Quick Action captures whatever lands on our stdout and uses it to replace
-        // the selected text via macOS Services. No terminator — the OpenAI prompt is
+        // the selected text via macOS Services. No terminator — the prompt is
         // already configured to return clean text, and a trailing newline would show up
-        // verbatim in the editor.
+        // verbatim in the editor. Closing stdout hands the text over immediately, so the
+        // island's slide-out never delays the replacement.
         FileHandle.standardOutput.write(Data(corrected.utf8))
+        FileHandle.standardOutput.closeFile()
 
-        NSApp.terminate(nil)
-        exit(0)
+        island.hide {
+            NSApp.terminate(nil)
+            exit(0)
+        }
     }
 
     private func finishFailure(_ message: String) {
-        statusWindow.hide()
+        island.hide()
         ErrorPresenter.showAndQuit("Style correction failed.", info: message)
     }
 
     // MARK: - Helpers
-
-    private func joined(_ items: [String]) -> String {
-        switch items.count {
-        case 0:  return ""
-        case 1:  return items[0]
-        case 2:  return "\(items[0]) and \(items[1])"
-        default:
-            let head = items.dropLast().joined(separator: ", ")
-            return "\(head), and \(items.last!)"
-        }
-    }
 
     /// Honors the `TPOPUP_DEBUG` env var so we can flip it on for diagnostics without
     /// shipping noise in release.

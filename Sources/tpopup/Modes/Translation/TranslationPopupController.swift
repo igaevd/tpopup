@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 /// Owns the translation popup window's lifecycle: pre-flight checks, window construction,
-/// the OpenAI request, and dismissal (Esc / focus loss).
+/// the model request, and dismissal (Esc / focus loss).
 ///
 /// Sizing strategy (cursor-independent — popup always centers on the active screen):
 ///
@@ -58,16 +58,16 @@ final class TranslationPopupController: NSObject, NSWindowDelegate {
     func run() {
         debugLog("run() entered")
 
-        // Pre-flight: settings filled in?
-        let settings = SettingsStore.shared.translation
-        if let missing = settings.missingFields {
-            let info: String
-            if missing.count >= 3 {
-                info = "Open the app to fill in your translation settings."
-            } else {
-                info = "Open the app and set the \(joined(missing)) in the Translation tab."
-            }
-            ErrorPresenter.showAndQuit("Translation settings are incomplete.", info: info)
+        // Pre-flight: a model is chosen, complete, and there is a prompt?
+        let store = SettingsStore.shared
+        let settings = store.translation
+        if let problem = settings.problem(models: store.models, tabName: "Translation") {
+            ErrorPresenter.showAndQuit("Translation settings are incomplete.", info: problem)
+        }
+        // `problem` is nil only when the profile resolves, so this cannot fail.
+        guard let profile = settings.profile(in: store.models) else {
+            ErrorPresenter.showAndQuit("Translation settings are incomplete.",
+                                       info: "Open the app and choose a model in the Translation tab.")
         }
 
         // Pre-flight: clipboard has text?
@@ -78,7 +78,7 @@ final class TranslationPopupController: NSObject, NSWindowDelegate {
             )
         }
 
-        debugLog("pre-flight passed; source.length=\(source.count) model=\(settings.model)")
+        debugLog("pre-flight passed; source.length=\(source.count) model=\(profile.preset.name)/\(profile.modelID)")
 
         // Pick the screen we'll center the popup on. Default to the main screen.
         let screen = NSScreen.main ?? NSScreen.screens.first!
@@ -92,34 +92,72 @@ final class TranslationPopupController: NSObject, NSWindowDelegate {
         applyLayout(initialLayout, resizeWindow: false)
         showWindow(with: initialLayout.windowSize)
 
-        // Fire the request.
+        startTranslation(of: source, profile: profile, prompt: settings.prompt)
+    }
+
+    /// Sends `source` and, on completion, re-measures and resizes for the new content.
+    /// Width is locked, so only the height changes.
+    private func startTranslation(of source: String, profile: ModelProfile, prompt: String) {
+        translationTask?.cancel()
         translationTask = Task { [weak self] in
             guard let self else { return }
             do {
-                let result = try await OpenAIClient().complete(
+                let result = try await LLMClient().complete(
                     text: source,
-                    apiKey: settings.apiKey,
-                    model: settings.model,
-                    prompt: settings.prompt
+                    prompt: prompt,
+                    profile: profile
                 )
-                self.debugLog("OpenAI request succeeded; chars=\(result.count)")
+                guard !Task.isCancelled else { return }
+                self.debugLog("request succeeded; chars=\(result.count)")
                 self.viewModel.finish(translation: result)
             } catch {
-                self.debugLog("OpenAI request failed: \(error.localizedDescription)")
+                guard !Task.isCancelled else { return }
+                self.debugLog("request failed: \(error.localizedDescription)")
                 self.viewModel.fail(error.localizedDescription)
             }
-            // Re-measure and grow/shrink the window for the new content. Width is
-            // locked, so only the height (translation section) changes.
             let layout = self.computeLayout()
             self.debugLog("post-translation layout: \(Int(layout.windowSize.width))×\(Int(layout.windowSize.height))")
             self.applyLayout(layout, resizeWindow: true)
         }
     }
 
+    /// Translate the (edited) source again.
+    private func retranslate() {
+        translate(viewModel.sourceText)
+    }
+
+    /// Move the translation into the source section and translate it back. The prompt
+    /// decides the direction from the text, so Russian goes to English and vice versa.
+    private func swapAndRetranslate() {
+        let text = viewModel.translation
+        guard viewModel.errorMessage == nil else { return }
+        translate(text)
+    }
+
+    /// Runs a new request for `source` as the top section. Settings are re-read so the
+    /// pre-flight that passed at launch still holds; the popup grows or shrinks for the
+    /// new source first.
+    private func translate(_ source: String) {
+        guard !source.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        let store = SettingsStore.shared
+        let settings = store.translation
+        guard let profile = settings.profile(in: store.models) else { return }
+
+        debugLog("translate again; source.length=\(source.count)")
+        viewModel.start(with: source)
+        applyLayout(computeLayout(), resizeWindow: true)
+        startTranslation(of: source, profile: profile, prompt: settings.prompt)
+    }
+
     // MARK: - Window setup
 
     private func showWindow(with contentSize: NSSize) {
-        let rootView = TranslationPopupView(viewModel: viewModel, layout: layoutModel)
+        let rootView = TranslationPopupView(
+            viewModel: viewModel,
+            layout: layoutModel,
+            onRetranslate: { [weak self] in self?.retranslate() },
+            onSwap: { [weak self] in self?.swapAndRetranslate() }
+        )
         let hostingView = NSHostingView(rootView: rootView)
         hostingView.frame = NSRect(origin: .zero, size: contentSize)
 
@@ -147,6 +185,9 @@ final class TranslationPopupController: NSObject, NSWindowDelegate {
 
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        // Don't start with the caret blinking in the (editable) source section — the
+        // popup should look exactly like a read-only card until the user clicks into it.
+        window.makeFirstResponder(nil)
 
         debugLog("window shown frame=\(window.frame) key=\(window.isKeyWindow)")
 
@@ -364,14 +405,4 @@ final class TranslationPopupController: NSObject, NSWindowDelegate {
 
     // MARK: - Helpers
 
-    private func joined(_ items: [String]) -> String {
-        switch items.count {
-        case 0:  return ""
-        case 1:  return items[0]
-        case 2:  return "\(items[0]) and \(items[1])"
-        default:
-            let head = items.dropLast().joined(separator: ", ")
-            return "\(head), and \(items.last!)"
-        }
-    }
 }
